@@ -1,8 +1,8 @@
-#PyPass
+# PyPass
 
 A lightweight cross-platform password manager using JSON and AES-128 encryption.
 
-##Json file structure
+## JSONfile structure
 ```json
 {
     "items":[
