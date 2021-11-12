@@ -2,7 +2,7 @@
 
 A lightweight cross-platform password manager using JSON and AES-128 encryption.
 
-## JSONfile structure
+## JSON file structure
 ```json
 {
     "items":[
