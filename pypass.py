@@ -1,8 +1,9 @@
-import json, base64, os, pyperclip; 
+import json, base64, os, pyperclip, getpass; 
 from cryptography.fernet import Fernet;
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
 from cryptography.hazmat.primitives import hashes;
-class Main:
+from InquirerPy import prompt;
+class Data:
     def __init__(self, file):
         self.file=file
         self.content=json.load(open(self.file, 'r'))
@@ -15,21 +16,20 @@ class Main:
     def password(self,search):
         for item in self.content['items']:
             if item['name']==search:
-                print('Username:'+item['user'])
-                return item['pass']
+                print('Username:'+item['username'])
+                return item['password']
                 break
     @property
     def names(self):
         return [x['name'] for x in self.content['items']]
 
 class Crypto:
-    def __init__(self, password, salt):
+    def __init__(self, password):
         password = bytes(password, 'utf-8')
-        salt = bytes(salt, 'utf-8')
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=salt,
+            salt=password,
             iterations=100000,
         )
         self.key=base64.urlsafe_b64encode(kdf.derive(password))
@@ -48,6 +48,17 @@ class Crypto:
         
 if __name__ == '__main__':
     file=str('pypass.json')
-    data=Main(file)
-    crypto=Crypto(password='password',salt='password')
-    crypto.decrypt(data.password(data.names[0]))
+    data=Data(file)
+    crypto=Crypto(getpass.getpass('Master password:'))
+    print(data.names)
+    questions = [
+    {
+        'type': 'list',
+        'name': 'name',
+        'message': 'Which login?',
+        'choices': data.names
+    },
+    ]
+    name=prompt(questions)['name']
+    enc=data.password(name)
+    crypto.decrypt(enc)
