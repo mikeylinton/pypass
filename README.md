@@ -11,8 +11,9 @@ Please note: Both the master password and salt are the same, this will be altere
         {
             "name":"Exmaple", 
             "username":"Alice", 
+            "uri":"https://www.example.com/",
             "password":"gAAAAABhj8Bhqz_Q4b-cGp9z-FKW8soLHQ4j30LtMxIz1MyyVGjIAbh7b4Gqnjwm-pOC8FFVu8FwpGie4u8YXGumZG1asWXieA==", 
-            "uri":"https://www.example.com/"
+            "UUID":"a8a8a8a8-4b4b-4c4c-4d4d-12e12e12e12e"
         }
     ]
 }

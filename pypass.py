@@ -1,4 +1,4 @@
-import json, base64, os, pyperclip, getpass; 
+import json, base64, pyperclip, getpass, uuid; 
 from cryptography.fernet import Fernet;
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
 from cryptography.hazmat.primitives import hashes;
@@ -6,26 +6,37 @@ from InquirerPy import prompt;
 class Data:
     def __init__(self, file):
         self.file=file
-        self.content=json.load(open(self.file, 'r'))
+        self.load
         
 
     @property
     def load(self):
-        self.content=json.load(open(self.file, 'r'))
+        data=json.load(open(self.file, 'r'))
+        self.settings=data['settings']
+        self.content=data['items']
 
-    def password(self,search):
-        for item in self.content['items']:
-            if item['name']==search:
-                print('Username:'+item['username'])
-                return item['password']
-                break
+    @property
+    def save(self):
+        data={}
+        data['settings']=self.settings
+        data['items']=self.content
+        with open(self.file,'r+') as file:
+            json.dump(data, file, indent=4)
+
     @property
     def names(self):
-        return [x['name'] for x in self.content['items']]
+        return [[x['UUID'],x['name']] for x in self.content]
+
+    def add(self, entry):
+        entry['UUID']=str(uuid.uuid4())
+        items=self.content
+        items.append(entry)
+        self.content=items
+        self.save
 
 class Crypto:
-    def __init__(self, password):
-        password = bytes(password, 'utf-8')
+    def __init__(self):
+        password = bytes(getpass.getpass('Master password:'), 'utf-8')
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -43,22 +54,69 @@ class Crypto:
         secret = bytes(secret, 'utf-8')
         f = Fernet(self.key)
         pyperclip.copy(f.decrypt(secret).decode('utf-8'))
-        input('Password saved to clipboard, press any key to clear.')
+        input('Password saved to clipboard, press return to clear.')
         pyperclip.copy('')
         
-if __name__ == '__main__':
-    file=str('pypass.json')
-    data=Data(file)
-    crypto=Crypto(getpass.getpass('Master password:'))
-    print(data.names)
-    questions = [
+def getEntry(data,crypto):
+    select = [
     {
         'type': 'list',
-        'name': 'name',
-        'message': 'Which login?',
+        'name': 'option',
+        'message': 'What would you like to do?',
         'choices': data.names
     },
     ]
-    name=prompt(questions)['name']
-    enc=data.password(name)
-    crypto.decrypt(enc)
+    UUID=prompt(select)['option'][0]
+    for x in data.content:
+        if x['UUID']==UUID:
+            username=x['username']
+            password=x['password']
+            break
+    pyperclip.copy(username)
+    print('Username: '+username)
+    input('Username saved to clipboard, press return to get password.')
+    pyperclip.copy(crypto.decrypt(password))
+    input('Password saved to clipboard, press return to clear clipboard.')
+
+def addEntry(data,crypto):
+    questions = [
+    {"type": "input", "message": "Entry name?", "name": "name"},
+    {"type": "input", "message": "URI?", "name": "uri"},
+    {"type": "input", "message": "Username?", "name": "username"}
+    ]
+    entry=prompt(questions)
+    entry['password']=crypto.encrypt(getpass.getpass('Password:'))
+    data.add(entry)
+
+if __name__ == '__main__':
+    file=str('pypass.json')
+    select = [
+    {
+        'type': 'list',
+        'name': 'option',
+        'message': 'What would you like to do?',
+        'choices': [
+            'Get login',
+            'Add login',
+            'Exit'
+        ]
+    },
+    ]
+    option=prompt(select)['option']
+    if option=='Exit':
+        exit()
+    else:
+        data=Data(file)
+        crypto=Crypto()
+    if option=='Get login':
+        getEntry(data,crypto)
+    elif option=='Add login':
+        addEntry(data,crypto)
+    while True:
+        option=prompt(select)['option']
+        if option=='Exit':
+            exit()
+        elif option=='Get login':
+            getEntry(data,crypto)
+        elif option=='Add login':
+            addEntry(data,crypto)
