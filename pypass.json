@@ -1,7 +1,7 @@
 {
-    "settings": [
+    "config": [
         {
-            "static_salt": true
+            "token": "343d58244d3fb57019ef0cfb210d77814ebfbda99c7d61a6320558648d1311cd"
         }
     ],
     "items": [

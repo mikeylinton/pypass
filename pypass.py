@@ -2,6 +2,7 @@ import json, base64, pyperclip, getpass, uuid;
 from cryptography.fernet import Fernet;
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
 from cryptography.hazmat.primitives import hashes;
+from hashlib import sha256;
 from InquirerPy import prompt;
 from InquirerPy.validator import PathValidator;
 class Data:
@@ -13,13 +14,13 @@ class Data:
     @property
     def load(self):
         data=json.load(open(self.file, 'r'))
-        self.settings=data['settings']
+        self.config=data['config'][0]
         self.content=data['items']
 
     @property
     def save(self):
         data={}
-        data['settings']=self.settings
+        data['config']=self.config
         data['items']=self.content
         with open(self.file,'r+') as file:
             json.dump(data, file, indent=4)
@@ -35,6 +36,10 @@ class Data:
 
 class Crypto:
     def __init__(self):
+        self.key=self.keygen
+
+    @property
+    def keygen(self):
         password = bytes(getpass.getpass('Master password:'), 'utf-8')
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -42,7 +47,7 @@ class Crypto:
             salt=password,
             iterations=100000,
         )
-        self.key=base64.urlsafe_b64encode(kdf.derive(password))
+        return base64.urlsafe_b64encode(kdf.derive(password))
 
     def encrypt(self, secret):
         secret = bytes(secret, 'utf-8')
@@ -52,8 +57,11 @@ class Crypto:
     def decrypt(self, secret):
         secret = bytes(secret, 'utf-8')
         f = Fernet(self.key)
-        pyperclip.copy(f.decrypt(secret).decode('utf-8'))
-        input('Password saved to clipboard, press return to clear.')
+        try:
+            pyperclip.copy(f.decrypt(secret).decode('utf-8'))
+            input('Password saved to clipboard, press return to clear clipboard.')
+        except:
+            print('Incorrect password, make sure you entered the correct password.')
         pyperclip.copy('')
         
 def getEntry(data,crypto):
@@ -70,12 +78,15 @@ def getEntry(data,crypto):
         if x['UUID']==UUID:
             username=x['username']
             password=x['password']
+            if username!=None:
+                pyperclip.copy(username)
+                print('Username: '+username)
+                input('Username saved to clipboard, press return to get password.')
+            if password!=None:
+                crypto.decrypt(password)
             break
-    pyperclip.copy(username)
-    print('Username: '+username)
-    input('Username saved to clipboard, press return to get password.')
-    pyperclip.copy(crypto.decrypt(password))
-    input('Password saved to clipboard, press return to clear clipboard.')
+    
+    
 
 def addEntry(data,crypto):
     questions = [
@@ -114,6 +125,8 @@ def importData(data,crypto):
     if option=='Bitwarden':
         external_data=json.load(open(filepath, 'r'))["items"]
         for x in external_data:
+            if x['type']!=1:
+                continue
             items={}
             items['name']=x['name']
             items['uri']=x['login']['uris'][0]['uri']
@@ -122,6 +135,11 @@ def importData(data,crypto):
             items['UUID']=x['id']
             data.add(items)
         data.save
+
+def verifyToken(data,crypto):
+    if sha256(crypto.key).hexdigest()!=data.config['token']:
+        print("Invalid token")
+        exit()
 
 if __name__ == '__main__':
     file=str('pypass.json')
@@ -144,6 +162,7 @@ if __name__ == '__main__':
     else:
         data=Data(file)
         crypto=Crypto()
+        verifyToken(data,crypto)
     if option=='Get login':
         getEntry(data,crypto)
     elif option=='Add login':
