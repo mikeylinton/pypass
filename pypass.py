@@ -12,10 +12,11 @@ class Main:
     def load(self):
         self.content=json.load(open(self.file, 'r'))
 
-    def find(self,search):
+    def password(self,search):
         for item in self.content['items']:
             if item['name']==search:
-                print(item['uri'])
+                print('Username:'+item['user'])
+                return item['pass']
                 break
     @property
     def names(self):
@@ -36,17 +37,17 @@ class Crypto:
     def encrypt(self, secret):
         secret = bytes(secret, 'utf-8')
         f = Fernet(self.key)
-        return f.encrypt(secret)
+        return f.encrypt(secret).decode('utf-8')
 
     def decrypt(self, secret):
+        secret = bytes(secret, 'utf-8')
         f = Fernet(self.key)
         pyperclip.copy(f.decrypt(secret).decode('utf-8'))
-        print('The text to be copied to the clipboard.')
+        input('Password saved to clipboard, press any key to clear.')
+        pyperclip.copy('')
         
 if __name__ == '__main__':
     file=str('pypass.json')
     data=Main(file)
     crypto=Crypto(password='password',salt='password')
-    # print(data.names)
-    # msg=crypto.encrypt('fsefsfesfesf')
-    # crypto.decrypt(msg)
+    crypto.decrypt(data.password(data.names[0]))

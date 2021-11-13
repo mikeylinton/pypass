@@ -1,13 +1,10 @@
 {
     "items":[
         {
-            "name":"Exmaple", "user":"Alice", "pass":"Prb1uDOZ3xWJN2C4wN/sKS0xS/Q2oJ6IjihY7UyHM2m0TmUMlUm9euLaw3CZ2qFD", "uri":"https://www.example.com/"
-        },
-        {
-            "name":"Exmaple2", "user":"Bob", "pass":"Prb1uDOZ3xWJN2C4wN/sKS0xS/Q2oJ6IjihY7UyHM2m0TmUMlUm9euLaw3CZ2qFD", "uri":"https://www.example2.com/"
-        },
-        {
-            "name":"Exmaple3", "user":"Eve", "pass":"Prb1uDOZ3xWJN2C4wN/sKS0xS/Q2oJ6IjihY7UyHM2m0TmUMlUm9euLaw3CZ2qFD", "uri":"https://www.example3.com/"
-        }
+            "name":"Example", 
+            "user":"Alice@example.com", 
+            "pass":"gAAAAABhj8Bhqz_Q4b-cGp9z-FKW8soLHQ4j30LtMxIz1MyyVGjIAbh7b4Gqnjwm-pOC8FFVu8FwpGie4u8YXGumZG1asWXieA==", 
+            "uri":"https://www.example.com/"
+        } 
     ]
 }
