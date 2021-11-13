@@ -10,6 +10,7 @@ Please note: Both the master password and salt are the same, this will be altere
     "config": [
         {
             "token": "343d58244d3fb57019ef0cfb210d77814ebfbda99c7d61a6320558648d1311cd"
+            //Master password: password
         }
     ],
     "items":[
