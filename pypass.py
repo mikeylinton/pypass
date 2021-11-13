@@ -3,6 +3,7 @@ from cryptography.fernet import Fernet;
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
 from cryptography.hazmat.primitives import hashes;
 from InquirerPy import prompt;
+from InquirerPy.validator import PathValidator;
 class Data:
     def __init__(self, file):
         self.file=file
@@ -28,11 +29,9 @@ class Data:
         return [[x['UUID'],x['name']] for x in self.content]
 
     def add(self, entry):
-        entry['UUID']=str(uuid.uuid4())
         items=self.content
         items.append(entry)
         self.content=items
-        self.save
 
 class Crypto:
     def __init__(self):
@@ -86,7 +85,43 @@ def addEntry(data,crypto):
     ]
     entry=prompt(questions)
     entry['password']=crypto.encrypt(getpass.getpass('Password:'))
+    entry['UUID']=str(uuid.uuid4())
     data.add(entry)
+    data.save
+
+def importData(data,crypto):
+    select = [
+    {
+        'type': 'list',
+        'name': 'option',
+        'message': 'Import from?',
+        'choices': [
+            'Bitwarden',
+            'Back'
+        ]
+    },
+    {
+        "message": "Enter the filepath to upload:",
+        "type": "filepath",
+        "name": "filepath",
+        "validate": PathValidator(),
+        "only_files": True,
+    }
+    ]
+    result=prompt(select)
+    option=result['option']
+    filepath=result['filepath']
+    if option=='Bitwarden':
+        external_data=json.load(open(filepath, 'r'))["items"]
+        for x in external_data:
+            items={}
+            items['name']=x['name']
+            items['uri']=x['login']['uris'][0]['uri']
+            items['username']=x['login']['username']
+            items['password']=crypto.encrypt(x['login']['password'])
+            items['UUID']=x['id']
+            data.add(items)
+        data.save
 
 if __name__ == '__main__':
     file=str('pypass.json')
@@ -98,6 +133,7 @@ if __name__ == '__main__':
         'choices': [
             'Get login',
             'Add login',
+            'Import data',
             'Exit'
         ]
     },
@@ -112,6 +148,8 @@ if __name__ == '__main__':
         getEntry(data,crypto)
     elif option=='Add login':
         addEntry(data,crypto)
+    elif option=='Import data':
+        importData(data,crypto)
     while True:
         option=prompt(select)['option']
         if option=='Exit':
@@ -120,3 +158,5 @@ if __name__ == '__main__':
             getEntry(data,crypto)
         elif option=='Add login':
             addEntry(data,crypto)
+        elif option=='Import data':
+            importData(data,crypto)
