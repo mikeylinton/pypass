@@ -14,7 +14,7 @@ class Data:
     @property
     def load(self):
         data=json.load(open(self.filepath, 'r'))
-        self.config=data['config'][0]
+        self.config=data['config']
         self.content=data['items']
 
     @property
@@ -122,6 +122,18 @@ def verifyToken(data,crypto):
         print('Invalid token')
         exit()
 
+def initDataFile(filepath):
+    crypto=Crypto()
+    with open(filepath,'w') as f:
+        f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
+
+def init():
+    data=Data(filepath)
+    crypto=Crypto()
+    verifyToken(data,crypto)
+    return [data,crypto] 
+
+
 if __name__ == '__main__':
     filepath=str('pypass.json')
 
@@ -134,12 +146,13 @@ if __name__ == '__main__':
             'Select existing file',
             'Create new file',
             'Exit'
-        ]
+        ],
+        'name': 'init'
     },
     {
         'message': 'Enter the filepath to upload:',
         'type': 'filepath',
-        'when': lambda _: _[0] == 'Select existing file',
+        'when': lambda _: _['init'] == 'Select existing file',
         'validate': PathValidator(),
         'only_files': True,
         'name': 'pypass'
@@ -147,7 +160,7 @@ if __name__ == '__main__':
     {
         'message': 'Enter the file name, press return to use default:', 
         'type': 'input', 
-        'when': lambda _: _[0] == 'Create new file',
+        'when': lambda _: _['init'] == 'Create new file',
         'name': 'pypass'
     },
     {
@@ -159,12 +172,12 @@ if __name__ == '__main__':
             'Import data',
             'Exit'
         ],
-        'name': 'option'
+        'name': 'main'
     },
     {
         'message': 'Import from?',
         'type': 'list',
-        'when': lambda _: _['option'] == 'Import data',
+        'when': lambda _: _['main'] == 'Import data',
         'name': 'import',
         'choices': [
             'Bitwarden (unencrypted)',
@@ -174,7 +187,7 @@ if __name__ == '__main__':
     {
         'message': 'Enter the filepath to upload:',
         'type': 'filepath',
-        'when': lambda _: _['option'] == 'Import data' and _['import'] != 'Back',
+        'when': lambda _: _['main'] == 'Import data' and _['import'] != 'Back',
         'name': 'filepath',
         'validate': PathValidator(),
         'only_files': True
@@ -184,39 +197,22 @@ if __name__ == '__main__':
         result = prompt(questions, vi_mode=True)
     except InvalidArgument:
         print('No available choices')
-    
-    if result[0] == 'Exit':
+    option=result['main']
+
+    if result['init'] == 'Exit' or option=='Exit':
         exit()
     elif result['pypass']==None:
         pass
     elif result['pypass']=='':
-        crypto=Crypto()
-        with open(filepath,'w') as f:
-            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
+        initDataFile(filepath)
     elif not fileExists(result['pypass']):
         filepath=result['pypass']
-        crypto=Crypto()
-        with open(filepath,'w') as f:
-            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
+        initDataFile(filepath)
     else:
         filepath=result['pypass']
 
-    option=result['option']
-    if option=='Exit':
-        exit()
-    else:
-        data=Data(filepath)
-        crypto=Crypto()
-        verifyToken(data,crypto)
-    if option=='Get login':
-        getEntry(data,crypto)
-    elif option=='Add login':
-        addEntry(data,crypto)
-    elif option=='Import data' and result['import']!='Back':
-        importData(result['import'],data,crypto)
+    data,crypto=init()
     while True:
-        result=prompt(questions)
-        option=result['option']
         if option=='Exit':
             exit()
         elif option=='Get login':
@@ -225,3 +221,8 @@ if __name__ == '__main__':
             addEntry(data,crypto)
         elif option=='Import data' and result['import']!='Back':
             importData(result['import'],data,crypto)
+        try:
+            result = prompt(questions, vi_mode=True)
+        except InvalidArgument:
+            print('No available choices')
+        option=result['main']
