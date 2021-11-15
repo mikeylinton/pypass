@@ -154,16 +154,17 @@ if __name__ == '__main__':
     {
         'message': 'Default file not found! What would you like to do?',
         'type': 'list',
-        'when': lambda _: not fileExists(filepath),
+        'when': lambda _: not os.path.exists(filepath),
         'choices': [
             'Select existing file',
-            'Create new file'
+            'Create new file',
+            'Exit'
         ]
     },
     {
         'message': 'Enter the filepath to upload:',
         'type': 'filepath',
-        'when': selectExistingFile,
+        'when': lambda _: _[0] == 'Select existing file',
         'validate': PathValidator(),
         'only_files': True,
         'name': 'filepath'
@@ -171,7 +172,7 @@ if __name__ == '__main__':
     {
         'message': 'Enter the file name, press return to use default:', 
         'type': 'input', 
-        'when': createNewFile, 
+        'when': lambda _: _[0] == 'Create new file',
         'name': 'filepath'
     }
     ]
@@ -180,8 +181,10 @@ if __name__ == '__main__':
         result = prompt(questions, vi_mode=True)
     except InvalidArgument:
         print('No available choices')
-
-    if result['filepath']==None:
+    
+    if result[0] == 'Exit':
+        exit()
+    elif result['filepath']==None:
         pass
     elif result['filepath']=='':
         crypto=Crypto()
