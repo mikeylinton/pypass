@@ -1,4 +1,4 @@
-import json, base64, pyperclip, getpass, uuid; 
+import json, base64, pyperclip, getpass, uuid, os; 
 from cryptography.fernet import Fernet;
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
 from cryptography.hazmat.primitives import hashes;
@@ -6,14 +6,14 @@ from hashlib import sha256;
 from InquirerPy import prompt;
 from InquirerPy.validator import PathValidator;
 class Data:
-    def __init__(self, file):
-        self.file=file
+    def __init__(self, filepath):
+        self.filepath=filepath
         self.load
         
 
     @property
     def load(self):
-        data=json.load(open(self.file, 'r'))
+        data=json.load(open(self.filepath, 'r'))
         self.config=data['config'][0]
         self.content=data['items']
 
@@ -22,7 +22,7 @@ class Data:
         data={}
         data['config']=self.config
         data['items']=self.content
-        with open(self.file,'r+') as file:
+        with open(self.filepath,'r+') as file:
             json.dump(data, file, indent=4)
 
     @property
@@ -90,9 +90,9 @@ def getEntry(data,crypto):
 
 def addEntry(data,crypto):
     questions = [
-    {"type": "input", "message": "Entry name?", "name": "name"},
-    {"type": "input", "message": "URI?", "name": "uri"},
-    {"type": "input", "message": "Username?", "name": "username"}
+    {'type': 'input', 'message': 'Entry name?', 'name': 'name'},
+    {'type': 'input', 'message': 'URI?', 'name': 'uri'},
+    {'type': 'input', 'message': 'Username?', 'name': 'username'}
     ]
     entry=prompt(questions)
     entry['password']=crypto.encrypt(getpass.getpass('Password:'))
@@ -107,23 +107,23 @@ def importData(data,crypto):
         'name': 'option',
         'message': 'Import from?',
         'choices': [
-            'Bitwarden',
+            'Bitwarden (unencrypted)',
             'Back'
         ]
     },
     {
-        "message": "Enter the filepath to upload:",
-        "type": "filepath",
-        "name": "filepath",
-        "validate": PathValidator(),
-        "only_files": True,
+        'message': 'Enter the filepath to upload:',
+        'type': 'filepath',
+        'name': 'filepath',
+        'validate': PathValidator(),
+        'only_files': True,
     }
     ]
     result=prompt(select)
     option=result['option']
     filepath=result['filepath']
-    if option=='Bitwarden':
-        external_data=json.load(open(filepath, 'r'))["items"]
+    if option=='Bitwarden (unencrypted)':
+        external_data=json.load(open(filepath, 'r'))['items']
         for x in external_data:
             if x['type']!=1:
                 continue
@@ -138,29 +138,77 @@ def importData(data,crypto):
 
 def verifyToken(data,crypto):
     if sha256(crypto.key).hexdigest()!=data.config['token']:
-        print("Invalid token")
+        print('Invalid token')
         exit()
 
+def fileExists(filepath):
+    return os.path.exists(filepath)
+def selectExistingFile(result):
+    return result[0] == 'Select existing file'
+def createNewFile(result):
+    return result[0] == 'Create new file'
+
 if __name__ == '__main__':
-    file=str('pypass.json')
-    select = [
+    filepath=str('pypass.json')
+    questions = [
     {
+        'message': 'Default file not found! What would you like to do?',
         'type': 'list',
-        'name': 'option',
+        'when': lambda _: not fileExists(filepath),
+        'choices': [
+            'Select existing file',
+            'Create new file'
+        ]
+    },
+    {
+        'message': 'Enter the filepath to upload:',
+        'type': 'filepath',
+        'when': selectExistingFile,
+        'validate': PathValidator(),
+        'only_files': True,
+        'name': 'filepath'
+    },
+    {
+        'message': 'Enter the file name, press return to use default:', 
+        'type': 'input', 
+        'when': createNewFile, 
+        'name': 'filepath'
+    },
+    {
         'message': 'What would you like to do?',
+        'type': 'list',
         'choices': [
             'Get login',
             'Add login',
             'Import data',
             'Exit'
-        ]
+        ],
+        'name': 'option'
     },
     ]
-    option=prompt(select)['option']
+
+    try:
+        result = prompt(questions, vi_mode=True)
+    except InvalidArgument:
+        print('No available choices')
+
+    if result['filepath']==None:
+        pass
+    elif result['filepath']=='':
+        with open(filepath,'w') as f:
+            f.write('{"config": [],"items":[]}')
+    elif not fileExists(result['filepath']):
+        filepath=result['filepath']
+        with open(filepath,'w') as f:
+            f.write('{"config": [],"items":[]}')
+    else:
+        filepath=result['filepath']
+
+    option=result['option']
     if option=='Exit':
         exit()
     else:
-        data=Data(file)
+        data=Data(filepath)
         crypto=Crypto()
         verifyToken(data,crypto)
     if option=='Get login':
@@ -169,8 +217,22 @@ if __name__ == '__main__':
         addEntry(data,crypto)
     elif option=='Import data':
         importData(data,crypto)
+
+    questions = [
+    {
+        'message': 'What would you like to do?',
+        'type': 'list',
+        'choices': [
+            'Get login',
+            'Add login',
+            'Import data',
+            'Exit'
+        ],
+        'name': 'option'
+    },
+    ]
     while True:
-        option=prompt(select)['option']
+        option=prompt(questions)['option']
         if option=='Exit':
             exit()
         elif option=='Get login':
