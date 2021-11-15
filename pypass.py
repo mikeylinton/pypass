@@ -173,18 +173,7 @@ if __name__ == '__main__':
         'type': 'input', 
         'when': createNewFile, 
         'name': 'filepath'
-    },
-    {
-        'message': 'What would you like to do?',
-        'type': 'list',
-        'choices': [
-            'Get login',
-            'Add login',
-            'Import data',
-            'Exit'
-        ],
-        'name': 'option'
-    },
+    }
     ]
 
     try:
@@ -195,28 +184,16 @@ if __name__ == '__main__':
     if result['filepath']==None:
         pass
     elif result['filepath']=='':
+        crypto=Crypto()
         with open(filepath,'w') as f:
-            f.write('{"config": [],"items":[]}')
+            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
     elif not fileExists(result['filepath']):
         filepath=result['filepath']
+        crypto=Crypto()
         with open(filepath,'w') as f:
-            f.write('{"config": [],"items":[]}')
+            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
     else:
         filepath=result['filepath']
-
-    option=result['option']
-    if option=='Exit':
-        exit()
-    else:
-        data=Data(filepath)
-        crypto=Crypto()
-        verifyToken(data,crypto)
-    if option=='Get login':
-        getEntry(data,crypto)
-    elif option=='Add login':
-        addEntry(data,crypto)
-    elif option=='Import data':
-        importData(data,crypto)
 
     questions = [
     {
@@ -231,6 +208,19 @@ if __name__ == '__main__':
         'name': 'option'
     },
     ]
+    option=prompt(questions)['option']
+    if option=='Exit':
+        exit()
+    else:
+        data=Data(filepath)
+        crypto=Crypto()
+        verifyToken(data,crypto)
+    if option=='Get login':
+        getEntry(data,crypto)
+    elif option=='Add login':
+        addEntry(data,crypto)
+    elif option=='Import data':
+        importData(data,crypto)
     while True:
         option=prompt(questions)['option']
         if option=='Exit':
