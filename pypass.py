@@ -170,6 +170,7 @@ if __name__ == '__main__':
             'Get login',
             'Add login',
             'Import data',
+            'Settings',
             'Exit'
         ],
         'name': 'main'
@@ -191,7 +192,17 @@ if __name__ == '__main__':
         'name': 'filepath',
         'validate': PathValidator(),
         'only_files': True
-    }
+    },
+    {
+        'message': 'What would you like to do?',
+        'type': 'list',
+        'when': lambda _: _['main'] == 'Settings' ,
+        'choices': [
+            'Change master password',
+            'Back'
+        ],
+        'name': 'settings'
+    },
     ]
     try:
         result = prompt(questions, vi_mode=True)
