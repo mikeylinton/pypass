@@ -40,7 +40,7 @@ class Crypto:
 
     @property
     def keygen(self):
-        password = bytes(getpass.getpass('Master password:'), 'utf-8')
+        password = bytes(getpass.getpass('Password:'), 'utf-8')
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -123,7 +123,14 @@ def verifyToken(data,crypto):
         exit()
 
 def initDataFile(filepath):
-    crypto=Crypto()
+    match=False
+    while not match:
+        crypto=Crypto()
+        print("Confirm password.")
+        if crypto.key==crypto.keygen:
+            match=True
+        else:
+            print("Passwords do not match!")
     with open(filepath,'w') as f:
         f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
 
@@ -198,7 +205,7 @@ if __name__ == '__main__':
         'type': 'list',
         'when': lambda _: _['main'] == 'Settings' ,
         'choices': [
-            'Change master password',
+            'Change Password',
             'Back'
         ],
         'name': 'settings'
