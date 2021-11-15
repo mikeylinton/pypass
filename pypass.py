@@ -100,27 +100,8 @@ def addEntry(data,crypto):
     data.add(entry)
     data.save
 
-def importData(data,crypto):
-    select = [
-    {
-        'type': 'list',
-        'name': 'option',
-        'message': 'Import from?',
-        'choices': [
-            'Bitwarden (unencrypted)',
-            'Back'
-        ]
-    },
-    {
-        'message': 'Enter the filepath to upload:',
-        'type': 'filepath',
-        'name': 'filepath',
-        'validate': PathValidator(),
-        'only_files': True,
-    }
-    ]
-    result=prompt(select)
-    option=result['option']
+def importData(result,data,crypto):
+    option=result['import']
     filepath=result['filepath']
     if option=='Bitwarden (unencrypted)':
         external_data=json.load(open(filepath, 'r'))['items']
@@ -141,15 +122,9 @@ def verifyToken(data,crypto):
         print('Invalid token')
         exit()
 
-def fileExists(filepath):
-    return os.path.exists(filepath)
-def selectExistingFile(result):
-    return result[0] == 'Select existing file'
-def createNewFile(result):
-    return result[0] == 'Create new file'
-
 if __name__ == '__main__':
     filepath=str('pypass.json')
+
     questions = [
     {
         'message': 'Default file not found! What would you like to do?',
@@ -167,38 +142,14 @@ if __name__ == '__main__':
         'when': lambda _: _[0] == 'Select existing file',
         'validate': PathValidator(),
         'only_files': True,
-        'name': 'filepath'
+        'name': 'pypass'
     },
     {
         'message': 'Enter the file name, press return to use default:', 
         'type': 'input', 
         'when': lambda _: _[0] == 'Create new file',
-        'name': 'filepath'
-    }
-    ]
-
-    try:
-        result = prompt(questions, vi_mode=True)
-    except InvalidArgument:
-        print('No available choices')
-    
-    if result[0] == 'Exit':
-        exit()
-    elif result['filepath']==None:
-        pass
-    elif result['filepath']=='':
-        crypto=Crypto()
-        with open(filepath,'w') as f:
-            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
-    elif not fileExists(result['filepath']):
-        filepath=result['filepath']
-        crypto=Crypto()
-        with open(filepath,'w') as f:
-            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
-    else:
-        filepath=result['filepath']
-
-    questions = [
+        'name': 'pypass'
+    },
     {
         'message': 'What would you like to do?',
         'type': 'list',
@@ -210,8 +161,47 @@ if __name__ == '__main__':
         ],
         'name': 'option'
     },
+    {
+        'message': 'Import from?',
+        'type': 'list',
+        'when': lambda _: _['option'] == 'Import data',
+        'name': 'import',
+        'choices': [
+            'Bitwarden (unencrypted)',
+            'Back'
+        ]
+    },
+    {
+        'message': 'Enter the filepath to upload:',
+        'type': 'filepath',
+        'when': lambda _: _['option'] == 'Import data' and _['import'] != 'Back',
+        'name': 'filepath',
+        'validate': PathValidator(),
+        'only_files': True
+    }
     ]
-    option=prompt(questions)['option']
+    try:
+        result = prompt(questions, vi_mode=True)
+    except InvalidArgument:
+        print('No available choices')
+    
+    if result[0] == 'Exit':
+        exit()
+    elif result['pypass']==None:
+        pass
+    elif result['pypass']=='':
+        crypto=Crypto()
+        with open(filepath,'w') as f:
+            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
+    elif not fileExists(result['pypass']):
+        filepath=result['pypass']
+        crypto=Crypto()
+        with open(filepath,'w') as f:
+            f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
+    else:
+        filepath=result['pypass']
+
+    option=result['option']
     if option=='Exit':
         exit()
     else:
@@ -222,15 +212,16 @@ if __name__ == '__main__':
         getEntry(data,crypto)
     elif option=='Add login':
         addEntry(data,crypto)
-    elif option=='Import data':
-        importData(data,crypto)
+    elif option=='Import data' and result['import']!='Back':
+        importData(result['import'],data,crypto)
     while True:
-        option=prompt(questions)['option']
+        result=prompt(questions)
+        option=result['option']
         if option=='Exit':
             exit()
         elif option=='Get login':
             getEntry(data,crypto)
         elif option=='Add login':
             addEntry(data,crypto)
-        elif option=='Import data':
-            importData(data,crypto)
+        elif option=='Import data' and result['import']!='Back':
+            importData(result['import'],data,crypto)
