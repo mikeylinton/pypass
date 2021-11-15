@@ -220,7 +220,7 @@ if __name__ == '__main__':
         elif option=='Add login':
             addEntry(data,crypto)
         elif option=='Import data' and result['import']!='Back':
-            importData(result['import'],data,crypto)
+            importData(result,data,crypto)
         try:
             result = prompt(questions, vi_mode=True)
         except InvalidArgument:
