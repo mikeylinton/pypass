@@ -14,7 +14,7 @@ class Data:
     @property
     def load(self):
         data=json.load(open(self.filepath, 'r'))
-        self.config=data['config']
+        self.config=data['config'][0]
         self.content=data['items']
 
     @property
