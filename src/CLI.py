@@ -3,12 +3,11 @@ from InquirerPy.validator import PathValidator
 from Data import *
 class CLI:
     def __init__(self):
-        self.defaultFile='pypass.json'
         self.initQuestions = [
         {
             'message': 'Default file not found! What would you like to do?',
             'type': 'list',
-            'when': lambda _: not fileExists(self.defaultFile),
+            'when': lambda _: not fileExists(Data().filepath),
             'choices': [
                 'Select existing file',
                 'Create new file',
@@ -38,11 +37,22 @@ class CLI:
             'choices': [
                 'Get login',
                 'Add login',
+                'Del login',
                 'Import data',
                 # 'Settings',
                 'Exit'
             ],
             'name': 'main'
+        },
+        {
+            'message': 'Would you like to save?',
+            'type': 'list',
+            'when': lambda _: _['main'] == 'Exit',
+            'choices': [
+                'No',
+                'Yes'
+            ],
+            'name': 'save'
         },
         {
             'message': 'Import from?',
@@ -74,7 +84,7 @@ class CLI:
         # },
         {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Entry name?', 'name': 'loginName'},
         {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'URI?', 'name': 'loginURI'},
-        {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Username?', 'name': 'loginUsername'}
+        {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Username?', 'name': 'loginUsername'},
         ]
 
 def inquirer(questions):
