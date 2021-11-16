@@ -1,4 +1,4 @@
-import json, uuid, getpass
+import json, uuid, getpass, os
 from Crypto import Crypto
 class Data:
     def __init__(self, filepath):
@@ -18,6 +18,9 @@ class Data:
         items=self.items
         items.append(item)
         self.items=items
+
+def fileExists(filepath):
+    return os.path.exists(filepath)
 
 def initDataFile(filepath):
     match=False
