@@ -1,21 +1,26 @@
-import sys, os, json, base64, pyperclip, getpass
+import sys, os, json, base64, pyperclip, getpass, uuid
 from hashlib import sha256
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/src')
 from Crypto import *
 from Data import *
 from CLI import *
    
-def getEntry(data,crypto):
+def saveData(jsonData,crypto):
+    enc=crypto.encrypt(json.dumps(jsonData))
+    with open(filepath,'w') as f:
+        f.write(enc)
+
+def getItem(items):
     select = [
     {
         'type': 'list',
         'name': 'option',
         'message': 'What would you like to do?',
-        'choices': loginList(data)
+        'choices': [[x["UUID"],x["name"]] for x in items]
     },
     ]
     UUID=prompt(select)['option'][0]
-    for x in data.items:
+    for x in items:
         if x['UUID']==UUID:
             username=x['username']
             password=x['password']
@@ -28,6 +33,15 @@ def getEntry(data,crypto):
                 input('Password saved to clipboard, press return to clear clipboard.')
             break
 
+def createItem(result):
+    item={}
+    item["name"]=result["loginName"]
+    item["username"]=result["loginUsername"]
+    item["uri"]=result["loginURI"]
+    item["password"]=getpass.getpass("Password:")
+    item["UUID"]=str(uuid.uuid4())
+    return item
+
 def initDataFile(filepath):
     match=False
     while not match:
@@ -38,14 +52,13 @@ def initDataFile(filepath):
             print('Password updated.')
         else:
             print('Passwords do not match!')
-    data='{"config":[],"items":[]}'
-    with open(filepath,'w') as f:
-        f.write(cryptoA.encrypt(data))
+    saveData('{"config":[],"items":[]}',cryptoA)
 
 if __name__ == '__main__':
     cli=CLI()
-    result=inquirer(cli.initQuestions)
     filepath=cli.defaultFile
+
+    result=inquirer(cli.initQuestions)
     if result['init'] == 'Exit':
         exit()
     elif result['init']=='Select existing file':
@@ -54,28 +67,26 @@ if __name__ == '__main__':
     elif result['init']=='Create new file':
         if result['filepath']!='':
             filepath=result['filepath']
-            if fileExists(filepath):
-                print('File already exists! Selecting this file.')
-            else:
-                initDataFile(filepath)
+        if fileExists(filepath):
+            print('File already exists! Selecting this file.')
+        else:
+            initDataFile(filepath)
+
     crypto=Crypto('Master password:')
     data=Data(filepath)
-    dec=crypto.decrypt(data.content)
-    print(dec)
-    # # data.load(crypto)
-    # result=inquirer(cli.initQuestions)
-    # while True:
-    #     try:
-    #         result = prompt(questions, vi_mode=True)
-    #     except InvalidArgument:
-    #         print('No available choices')
-    #     option=result['main']
-    #     if option=='Exit':
-    #         exit()
-    #     elif option=='Get login':
-    #         getEntry(data,crypto)
-    #     elif option=='Add login':
-    #         addEntry(data,crypto,result)
-    #     elif option=='Import data' and result['import']!='Back':
-    #         importData(data,crypto,result)
+    jsonData=json.loads(crypto.decrypt(data.content))
+    
+    while True:
+        print(jsonData)
+        result=inquirer(cli.mainQuestions)
+        option=result['main']
+        if option=='Exit':
+            saveData(jsonData,crypto)
+            exit()
+        elif option=='Get login':
+            getItem(jsonData["items"])
+        elif option=='Add login':
+            jsonData["items"].append(createItem(result))
+        elif option=='Import data' and result['import']!='Back':
+            importData(data,crypto,result)
         

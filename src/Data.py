@@ -10,11 +10,11 @@ class Data:
             lines=f.readlines()
         self.content=''.join(lines)
 
-    def add(self, item):
-        pass
-        items=self.items
-        items.append(item)
-        self.items=items
+    # def add(self, item):
+    #     pass
+    #     items=self.items
+    #     items.append(item)
+    #     self.items=items
 
 def fileExists(filepath):
     return os.path.exists(filepath)
