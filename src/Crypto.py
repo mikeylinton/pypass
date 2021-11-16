@@ -3,12 +3,13 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 class Crypto:
-    def __init__(self):
+    def __init__(self,name):
+        self.name=name
         self.key=self.keygen
 
     @property
     def keygen(self):
-        password = bytes(getpass.getpass('Password:'), 'utf-8')
+        password = bytes(getpass.getpass(self.name), 'utf-8')
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

@@ -1,6 +1,7 @@
 import sys, os, json, base64, pyperclip, getpass
 from hashlib import sha256
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/src')
+from Crypto import *
 from Data import *
 from CLI import *
    
@@ -27,10 +28,23 @@ def getEntry(data,crypto):
                 input('Password saved to clipboard, press return to clear clipboard.')
             break
 
+def initDataFile(filepath):
+    match=False
+    while not match:
+        cryptoA=Crypto('Master password:')
+        cryptoB=Crypto('Confirm password:')
+        if cryptoA.key==cryptoB.key:
+            match=True
+            print('Password updated.')
+        else:
+            print('Passwords do not match!')
+    data='{"config":[],"items":[]}'
+    with open(filepath,'w') as f:
+        f.write(cryptoA.encrypt(data))
+
 if __name__ == '__main__':
     cli=CLI()
     result=inquirer(cli.initQuestions)
-    print(result)
     filepath=cli.defaultFile
     if result['init'] == 'Exit':
         exit()
@@ -44,19 +58,10 @@ if __name__ == '__main__':
                 print('File already exists! Selecting this file.')
             else:
                 initDataFile(filepath)
-
-    # elif result['filepath']==None:
-    #     print('hello')
-    #     filepath=cli.defaultFile
-    # elif result['filepath']=='':
-    #     initDataFile(filepath)
-    # elif not fileExists(result['filepath']):
-    #     filepath=result['filepath']
-    #     initDataFile(filepath)
-    # else:
-    #     filepath=result['filepath']
-    # # crypto=Crypto()
-    # # data=Data(filepath)
+    crypto=Crypto('Master password:')
+    data=Data(filepath)
+    dec=crypto.decrypt(data.content)
+    print(dec)
     # # data.load(crypto)
     # result=inquirer(cli.initQuestions)
     # while True:
