@@ -17,21 +17,8 @@ class Data:
             lines=f.readlines()
         self.content=''.join(lines)
 
-    # def add(self, item):
-    #     pass
-    #     items=self.items
-    #     items.append(item)
-    #     self.items=items
-
 def fileExists(filepath):
     return os.path.exists(filepath)
-
-# def saveData(data,crypto):
-#     newData={}
-#     newData["config"]=data.config
-#     newData["items"]=data.items
-#     with open(data.filepath,'w') as f:
-#         f.write(crypto.encrypt(newData))
 
 # def importData(data,crypto,result):
 #     option=result['import']
@@ -49,16 +36,3 @@ def fileExists(filepath):
 #             items["UUID"]=x["id"]
 #             data.add(items)
 #         saveData(data,crypto)
-
-# def addEntry(data,crypto,result):
-#     item={}
-#     item["name"]=result["loginName"]
-#     item["username"]=result["loginUsername"]
-#     item["uri"]=result["loginURI"]
-#     item["password"]=getpass.getpass("Password:")
-#     item["UUID"]=str(uuid.uuid4())
-#     data.add(item)
-#     saveData(data,crypto)
-
-# def loginList(data):
-#     return [[x["UUID"],x["name"]] for x in data.items]
