@@ -1,80 +1,22 @@
-import json, base64, pyperclip, getpass, uuid, os; 
-from cryptography.fernet import Fernet;
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
-from cryptography.hazmat.primitives import hashes;
-from hashlib import sha256;
-from InquirerPy import prompt;
-from InquirerPy.validator import PathValidator;
-class Data:
-    def __init__(self, filepath):
-        self.filepath=filepath
-        self.load
-        
+import sys, os, json, base64, pyperclip, getpass
+from hashlib import sha256
+from InquirerPy import prompt
+from InquirerPy.validator import PathValidator
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/src')
+from Data import *
 
-    @property
-    def load(self):
-        data=json.load(open(self.filepath, 'r'))
-        self.config=data['config'][0]
-        self.content=data['items']
-
-    @property
-    def save(self):
-        data={}
-        data['config']=self.config
-        data['items']=self.content
-        with open(self.filepath,'r+') as file:
-            json.dump(data, file, indent=4)
-
-    @property
-    def names(self):
-        return [[x['UUID'],x['name']] for x in self.content]
-
-    def add(self, entry):
-        items=self.content
-        items.append(entry)
-        self.content=items
-
-class Crypto:
-    def __init__(self):
-        self.key=self.keygen
-
-    @property
-    def keygen(self):
-        password = bytes(getpass.getpass('Password:'), 'utf-8')
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=password,
-            iterations=100000,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(password))
-
-    def encrypt(self, secret):
-        secret = bytes(secret, 'utf-8')
-        f = Fernet(self.key)
-        return f.encrypt(secret).decode('utf-8')
-
-    def decrypt(self, secret):
-        secret = bytes(secret, 'utf-8')
-        f = Fernet(self.key)
-        try:
-            pyperclip.copy(f.decrypt(secret).decode('utf-8'))
-            input('Password saved to clipboard, press return to clear clipboard.')
-        except:
-            print('Incorrect password, make sure you entered the correct password.')
-        pyperclip.copy('')
-        
+   
 def getEntry(data,crypto):
     select = [
     {
         'type': 'list',
         'name': 'option',
         'message': 'What would you like to do?',
-        'choices': data.names
+        'choices': loginList(data)
     },
     ]
     UUID=prompt(select)['option'][0]
-    for x in data.content:
+    for x in data.items:
         if x['UUID']==UUID:
             username=x['username']
             password=x['password']
@@ -83,63 +25,9 @@ def getEntry(data,crypto):
                 print('Username: '+username)
                 input('Username saved to clipboard, press return to get password.')
             if password!=None:
-                crypto.decrypt(password)
+                pyperclip.copy(password)
+                input('Password saved to clipboard, press return to clear clipboard.')
             break
-    
-    
-
-def addEntry(data,crypto):
-    questions = [
-    {'type': 'input', 'message': 'Entry name?', 'name': 'name'},
-    {'type': 'input', 'message': 'URI?', 'name': 'uri'},
-    {'type': 'input', 'message': 'Username?', 'name': 'username'}
-    ]
-    entry=prompt(questions)
-    entry['password']=crypto.encrypt(getpass.getpass('Password:'))
-    entry['UUID']=str(uuid.uuid4())
-    data.add(entry)
-    data.save
-
-def importData(result,data,crypto):
-    option=result['import']
-    filepath=result['filepath']
-    if option=='Bitwarden (unencrypted)':
-        external_data=json.load(open(filepath, 'r'))['items']
-        for x in external_data:
-            if x['type']!=1:
-                continue
-            items={}
-            items['name']=x['name']
-            items['uri']=x['login']['uris'][0]['uri']
-            items['username']=x['login']['username']
-            items['password']=crypto.encrypt(x['login']['password'])
-            items['UUID']=x['id']
-            data.add(items)
-        data.save
-
-def verifyToken(data,crypto):
-    if sha256(crypto.key).hexdigest()!=data.config['token']:
-        print('Invalid token')
-        exit()
-
-def initDataFile(filepath):
-    match=False
-    while not match:
-        crypto=Crypto()
-        print("Confirm password.")
-        if crypto.key==crypto.keygen:
-            match=True
-        else:
-            print("Passwords do not match!")
-    with open(filepath,'w') as f:
-        f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
-
-def init():
-    data=Data(filepath)
-    crypto=Crypto()
-    verifyToken(data,crypto)
-    return [data,crypto] 
-
 
 if __name__ == '__main__':
     filepath=str('pypass.json')
@@ -162,14 +50,38 @@ if __name__ == '__main__':
         'when': lambda _: _['init'] == 'Select existing file',
         'validate': PathValidator(),
         'only_files': True,
-        'name': 'pypass'
+        'name': 'filepath'
     },
     {
         'message': 'Enter the file name, press return to use default:', 
         'type': 'input', 
         'when': lambda _: _['init'] == 'Create new file',
-        'name': 'pypass'
-    },
+        'name': 'filepath'
+    }
+    ]
+
+    try:
+        result = prompt(questions, vi_mode=True)
+    except InvalidArgument:
+        print('No available choices')
+
+    if result['init'] == 'Exit':
+        exit()
+    elif result['filepath']==None:
+        pass
+    elif result['filepath']=='':
+        initDataFile(filepath)
+    elif not fileExists(result['filepath']):
+        filepath=result['filepath']
+        initDataFile(filepath)
+    else:
+        filepath=result['filepath']
+
+    crypto=Crypto()
+    data=Data(filepath)
+    data.load(crypto)
+    
+    questions = [
     {
         'message': 'What would you like to do?',
         'type': 'list',
@@ -177,7 +89,7 @@ if __name__ == '__main__':
             'Get login',
             'Add login',
             'Import data',
-            'Settings',
+            # 'Settings',
             'Exit'
         ],
         'name': 'main'
@@ -200,47 +112,32 @@ if __name__ == '__main__':
         'validate': PathValidator(),
         'only_files': True
     },
-    {
-        'message': 'What would you like to do?',
-        'type': 'list',
-        'when': lambda _: _['main'] == 'Settings' ,
-        'choices': [
-            'Change Password',
-            'Back'
-        ],
-        'name': 'settings'
-    },
+    # {
+    #     'message': 'What would you like to do?',
+    #     'type': 'list',
+    #     'when': lambda _: _['main'] == 'Settings',
+    #     'choices': [
+    #         'Change Password',
+    #         'Back'
+    #     ],
+    #     'name': 'settings'
+    # },
+    {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Entry name?', 'name': 'loginName'},
+    {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'URI?', 'name': 'loginURI'},
+    {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Username?', 'name': 'loginUsername'}
     ]
-    try:
-        result = prompt(questions, vi_mode=True)
-    except InvalidArgument:
-        print('No available choices')
-    option=result['main']
-
-    if result['init'] == 'Exit' or option=='Exit':
-        exit()
-    elif result['pypass']==None:
-        pass
-    elif result['pypass']=='':
-        initDataFile(filepath)
-    elif not fileExists(result['pypass']):
-        filepath=result['pypass']
-        initDataFile(filepath)
-    else:
-        filepath=result['pypass']
-
-    data,crypto=init()
     while True:
-        if option=='Exit':
-            exit()
-        elif option=='Get login':
-            getEntry(data,crypto)
-        elif option=='Add login':
-            addEntry(data,crypto)
-        elif option=='Import data' and result['import']!='Back':
-            importData(result,data,crypto)
         try:
             result = prompt(questions, vi_mode=True)
         except InvalidArgument:
             print('No available choices')
         option=result['main']
+        if option=='Exit':
+            exit()
+        elif option=='Get login':
+            getEntry(data,crypto)
+        elif option=='Add login':
+            addEntry(data,crypto,result)
+        elif option=='Import data' and result['import']!='Back':
+            importData(data,crypto,result)
+        
