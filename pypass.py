@@ -11,38 +11,46 @@ def saveData(data,crypto,jsonData):
         f.write(enc)
 
 def selectItem(items):
+    items=[[x["UUID"],x["name"]] for x in items]
+    items.insert(0,'Back')
+    pass
     select = [
     {
         'type': 'list',
-        'name': 'option',
         'message': 'What would you like to do?',
-        'choices': [[x["UUID"],x["name"]] for x in items]
+        'choices': items
     },
     ]
-    UUID=prompt(select)["option"][0]
-    return UUID
+    result=prompt(select)[0]
+    print()
+    if result=='Back':
+        return None
+    else:
+        return result[0]
 
 def getItem(items):
     UUID=selectItem(items)
-    for x in items:
-        if x["UUID"]==UUID:
-            username=x["username"]
-            password=x["password"]
-            if username!=None:
-                pyperclip.copy(username)
-                print('Username: '+username)
-                input('Username saved to clipboard, press return to get password.')
-            if password!=None:
-                pyperclip.copy(password)
-                input('Password saved to clipboard, press return to clear clipboard.')
-            break
+    if UUID!=None:
+        for x in items:
+            if x["UUID"]==UUID:
+                username=x["username"]
+                password=x["password"]
+                if username!=None:
+                    pyperclip.copy(username)
+                    print('Username: '+username)
+                    input('Username saved to clipboard, press return to get password.')
+                if password!=None:
+                    pyperclip.copy(password)
+                    input('Password saved to clipboard, press return to clear clipboard.')
+                break
 
 def delItem(items):
     UUID=selectItem(items)
-    for x in items:
-        if x["UUID"]==UUID:
-            items.remove(x)
-            break
+    if UUID!=None:
+        for x in items:
+            if x["UUID"]==UUID:
+                items.remove(x)
+                break
 
 def createItem(result):
     item={}
@@ -53,6 +61,23 @@ def createItem(result):
     item["UUID"]=str(uuid.uuid4())
     return item
 
+def importItems(result):
+    option=result['import']
+    filepath=result['filepath']
+    items=[]
+    if option=='Bitwarden (unencrypted)':
+        data=json.load(open(filepath, 'r'))['items']
+        for x in data:
+            if x['type']==1:
+                item={}
+                item["name"]=x["name"]
+                item["uri"]=x["login"]["uris"][0]["uri"]
+                item["username"]=x["login"]["username"]
+                item["password"]=x["login"]["password"]
+                item["UUID"]=x["id"]
+                items.append(item)
+    return items
+
 def initDataFile(data):
     match=False
     while not match:
@@ -60,9 +85,9 @@ def initDataFile(data):
         cryptoB=Crypto('Confirm password:')
         if cryptoA.key==cryptoB.key:
             match=True
-            print('Password updated.')
+            color_print([(cli.colour["Success"], 'Password updated.')])
         else:
-            print('Passwords do not match!')
+            color_print([(cli.colour["Alert"], 'Passwords do not match!')])
     saveData(data,cryptoA,'{"config":[],"items":[]}')
 
 if __name__ == '__main__':
@@ -71,34 +96,44 @@ if __name__ == '__main__':
     result=inquirer(cli.initQuestions)
     if result["init"] == 'Exit':
         exit()
-    elif result["init"]=='Select existing file':
-        if  result["filepath"]!=None:
-            data.filepath=result["filepath"]
-    elif result["init"]=='Create new file':
-        if result["filepath"]!='':
-            data.filepath=result["filepath"]
+    elif result["upload"]!=None:
+        data.filepath=result["upload"]
+    elif result["create"]!=None:
+        if result["create"]!='':
+            data.filepath=result["create"]
         if fileExists(data.filepath):
-            print('File already exists! Selecting this file.')
+            color_print([(cli.colour["Warning"], 'File already exists! Selecting this file.')])
         else:
             initDataFile(data)
 
     crypto=Crypto('Master password:')
     data.load
-    jsonData=json.loads(crypto.decrypt(data.content))
+
+    try:
+        jsonData=json.loads(crypto.decrypt(data.content))
+    except InvalidToken:
+        color_print([(cli.colour["Alert"], 'Incorrect password!')])
+        exit()
     
     while True:
         result=inquirer(cli.mainQuestions)
         option=result["main"]
         if option=='Exit':
-            if result["save"]=='Yes':
-                saveData(data,crypto,jsonData)
-            exit()
+            if result["save"]!='Cancel':
+                if result["save"]=='Yes':
+                    saveData(data,crypto,jsonData)
+                exit()
         elif option=='Get login':
             getItem(jsonData["items"])
         elif option=='Add login':
-            jsonData["items"].append(createItem(result))
+            if result['loginName']=='':
+                print('Name required!')
+            elif result['loginUsername']=='':
+                print('Username required!')
+            else:
+                jsonData["items"].append(createItem(result))
         elif option=='Del login':
             delItem(jsonData["items"])
         elif option=='Import data' and result["import"]!='Back':
-            importData(data,crypto,result)
+            jsonData["items"].extend(importItems(result))
         

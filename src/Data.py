@@ -19,20 +19,3 @@ class Data:
 
 def fileExists(filepath):
     return os.path.exists(filepath)
-
-# def importData(data,crypto,result):
-#     option=result['import']
-#     filepath=result['filepath']
-#     if option=='Bitwarden (unencrypted)':
-#         external_data=json.load(open(filepath, 'r'))['items']
-#         for x in external_data:
-#             if x['type']!=1:
-#                 continue
-#             items={}
-#             items["name"]=x["name"]
-#             items["uri"]=x["login"]["uris"][0]["uri"]
-#             items["username"]=x["login"]["username"]
-#             items["password"]=crypto.encrypt(x["login"]["password"])
-#             items["UUID"]=x["id"]
-#             data.add(items)
-#         saveData(data,crypto)
