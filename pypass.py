@@ -1,228 +1,139 @@
-import json, base64, pyperclip, getpass, uuid, os; 
-from cryptography.fernet import Fernet;
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC;
-from cryptography.hazmat.primitives import hashes;
-from hashlib import sha256;
-from InquirerPy import prompt;
-from InquirerPy.validator import PathValidator;
-class Data:
-    def __init__(self, filepath):
-        self.filepath=filepath
-        self.load
-        
+import sys, os, json, pyperclip, getpass, uuid
+from hashlib import sha256
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/src')
+from Crypto import *
+from Data import *
+from CLI import *
+   
+def saveData(data,crypto,jsonData):
+    enc=crypto.encrypt(json.dumps(jsonData))
+    with open(data.filepath,'w') as f:
+        f.write(enc)
 
-    @property
-    def load(self):
-        data=json.load(open(self.filepath, 'r'))
-        self.config=data['config'][0]
-        self.content=data['items']
-
-    @property
-    def save(self):
-        data={}
-        data['config']=self.config
-        data['items']=self.content
-        with open(self.filepath,'r+') as file:
-            json.dump(data, file, indent=4)
-
-    @property
-    def names(self):
-        return [[x['UUID'],x['name']] for x in self.content]
-
-    def add(self, entry):
-        items=self.content
-        items.append(entry)
-        self.content=items
-
-class Crypto:
-    def __init__(self):
-        self.key=self.keygen
-
-    @property
-    def keygen(self):
-        password = bytes(getpass.getpass('Master password:'), 'utf-8')
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=password,
-            iterations=100000,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(password))
-
-    def encrypt(self, secret):
-        secret = bytes(secret, 'utf-8')
-        f = Fernet(self.key)
-        return f.encrypt(secret).decode('utf-8')
-
-    def decrypt(self, secret):
-        secret = bytes(secret, 'utf-8')
-        f = Fernet(self.key)
-        try:
-            pyperclip.copy(f.decrypt(secret).decode('utf-8'))
-            input('Password saved to clipboard, press return to clear clipboard.')
-        except:
-            print('Incorrect password, make sure you entered the correct password.')
-        pyperclip.copy('')
-        
-def getEntry(data,crypto):
+def selectItem(items):
+    items=[[x["UUID"],x["name"]] for x in items]
+    items.insert(0,'Back')
+    pass
     select = [
     {
         'type': 'list',
-        'name': 'option',
         'message': 'What would you like to do?',
-        'choices': data.names
+        'choices': items
     },
     ]
-    UUID=prompt(select)['option'][0]
-    for x in data.content:
-        if x['UUID']==UUID:
-            username=x['username']
-            password=x['password']
-            if username!=None:
-                pyperclip.copy(username)
-                print('Username: '+username)
-                input('Username saved to clipboard, press return to get password.')
-            if password!=None:
-                crypto.decrypt(password)
-            break
-    
-    
+    result=prompt(select)[0]
+    print()
+    if result=='Back':
+        return None
+    else:
+        return result[0]
 
-def addEntry(data,crypto):
-    questions = [
-    {'type': 'input', 'message': 'Entry name?', 'name': 'name'},
-    {'type': 'input', 'message': 'URI?', 'name': 'uri'},
-    {'type': 'input', 'message': 'Username?', 'name': 'username'}
-    ]
-    entry=prompt(questions)
-    entry['password']=crypto.encrypt(getpass.getpass('Password:'))
-    entry['UUID']=str(uuid.uuid4())
-    data.add(entry)
-    data.save
+def getItem(items):
+    UUID=selectItem(items)
+    if UUID!=None:
+        for x in items:
+            if x["UUID"]==UUID:
+                username=x["username"]
+                password=x["password"]
+                if username!=None:
+                    pyperclip.copy(username)
+                    print('Username: '+username)
+                    input('Username saved to clipboard, press return to get password.')
+                if password!=None:
+                    pyperclip.copy(password)
+                    input('Password saved to clipboard, press return to clear clipboard.')
+                break
 
-def importData(result,data,crypto):
+def delItem(items):
+    UUID=selectItem(items)
+    if UUID!=None:
+        for x in items:
+            if x["UUID"]==UUID:
+                items.remove(x)
+                break
+
+def createItem(result):
+    item={}
+    item["name"]=result["loginName"]
+    item["username"]=result["loginUsername"]
+    item["uri"]=result["loginURI"]
+    item["password"]=getpass.getpass("Password:")
+    item["UUID"]=str(uuid.uuid4())
+    return item
+
+def importItems(result):
     option=result['import']
     filepath=result['filepath']
+    items=[]
     if option=='Bitwarden (unencrypted)':
-        external_data=json.load(open(filepath, 'r'))['items']
-        for x in external_data:
-            if x['type']!=1:
-                continue
-            items={}
-            items['name']=x['name']
-            items['uri']=x['login']['uris'][0]['uri']
-            items['username']=x['login']['username']
-            items['password']=crypto.encrypt(x['login']['password'])
-            items['UUID']=x['id']
-            data.add(items)
-        data.save
+        data=json.load(open(filepath, 'r'))['items']
+        for x in data:
+            if x['type']==1:
+                item={}
+                item["name"]=x["name"]
+                item["uri"]=x["login"]["uris"][0]["uri"]
+                item["username"]=x["login"]["username"]
+                item["password"]=x["login"]["password"]
+                item["UUID"]=x["id"]
+                items.append(item)
+    return items
 
-def verifyToken(data,crypto):
-    if sha256(crypto.key).hexdigest()!=data.config['token']:
-        print('Invalid token')
-        exit()
-
-def initDataFile(filepath):
-    crypto=Crypto()
-    with open(filepath,'w') as f:
-        f.write('{"config": [{"token": "'+sha256(crypto.key).hexdigest()+'"}],"items":[]}')
-
-def init():
-    data=Data(filepath)
-    crypto=Crypto()
-    verifyToken(data,crypto)
-    return [data,crypto] 
-
+def initDataFile(data):
+    match=False
+    while not match:
+        cryptoA=Crypto('Master password:')
+        cryptoB=Crypto('Confirm password:')
+        if cryptoA.key==cryptoB.key:
+            match=True
+            color_print([(cli.colour["Success"], 'Password updated.')])
+        else:
+            color_print([(cli.colour["Alert"], 'Passwords do not match!')])
+    saveData(data,cryptoA,'{"config":[],"items":[]}')
 
 if __name__ == '__main__':
-    filepath=str('pypass.json')
-
-    questions = [
-    {
-        'message': 'Default file not found! What would you like to do?',
-        'type': 'list',
-        'when': lambda _: not os.path.exists(filepath),
-        'choices': [
-            'Select existing file',
-            'Create new file',
-            'Exit'
-        ],
-        'name': 'init'
-    },
-    {
-        'message': 'Enter the filepath to upload:',
-        'type': 'filepath',
-        'when': lambda _: _['init'] == 'Select existing file',
-        'validate': PathValidator(),
-        'only_files': True,
-        'name': 'pypass'
-    },
-    {
-        'message': 'Enter the file name, press return to use default:', 
-        'type': 'input', 
-        'when': lambda _: _['init'] == 'Create new file',
-        'name': 'pypass'
-    },
-    {
-        'message': 'What would you like to do?',
-        'type': 'list',
-        'choices': [
-            'Get login',
-            'Add login',
-            'Import data',
-            'Exit'
-        ],
-        'name': 'main'
-    },
-    {
-        'message': 'Import from?',
-        'type': 'list',
-        'when': lambda _: _['main'] == 'Import data',
-        'name': 'import',
-        'choices': [
-            'Bitwarden (unencrypted)',
-            'Back'
-        ]
-    },
-    {
-        'message': 'Enter the filepath to upload:',
-        'type': 'filepath',
-        'when': lambda _: _['main'] == 'Import data' and _['import'] != 'Back',
-        'name': 'filepath',
-        'validate': PathValidator(),
-        'only_files': True
-    }
-    ]
-    try:
-        result = prompt(questions, vi_mode=True)
-    except InvalidArgument:
-        print('No available choices')
-    option=result['main']
-
-    if result['init'] == 'Exit' or option=='Exit':
+    cli=CLI()
+    data=Data()
+    result=inquirer(cli.initQuestions)
+    if result["init"] == 'Exit':
         exit()
-    elif result['pypass']==None:
-        pass
-    elif result['pypass']=='':
-        initDataFile(filepath)
-    elif not fileExists(result['pypass']):
-        filepath=result['pypass']
-        initDataFile(filepath)
-    else:
-        filepath=result['pypass']
+    elif result["upload"]!=None:
+        data.filepath=result["upload"]
+    elif result["create"]!=None:
+        if result["create"]!='':
+            data.filepath=result["create"]
+        if fileExists(data.filepath):
+            color_print([(cli.colour["Warning"], 'File already exists! Selecting this file.')])
+        else:
+            initDataFile(data)
 
-    data,crypto=init()
+    crypto=Crypto('Master password:')
+    data.load
+
+    try:
+        jsonData=json.loads(crypto.decrypt(data.content))
+    except InvalidToken:
+        color_print([(cli.colour["Alert"], 'Incorrect password!')])
+        exit()
+    
     while True:
+        result=inquirer(cli.mainQuestions)
+        option=result["main"]
         if option=='Exit':
-            exit()
+            if result["save"]!='Cancel':
+                if result["save"]=='Yes':
+                    saveData(data,crypto,jsonData)
+                exit()
         elif option=='Get login':
-            getEntry(data,crypto)
+            getItem(jsonData["items"])
         elif option=='Add login':
-            addEntry(data,crypto)
-        elif option=='Import data' and result['import']!='Back':
-            importData(result,data,crypto)
-        try:
-            result = prompt(questions, vi_mode=True)
-        except InvalidArgument:
-            print('No available choices')
-        option=result['main']
+            if result['loginName']=='':
+                print('Name required!')
+            elif result['loginUsername']=='':
+                print('Username required!')
+            else:
+                jsonData["items"].append(createItem(result))
+        elif option=='Del login':
+            delItem(jsonData["items"])
+        elif option=='Import data' and result["import"]!='Back':
+            jsonData["items"].extend(importItems(result))
+        
