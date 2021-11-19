@@ -79,7 +79,6 @@ def importItems(result):
     return items
 
 
-
 def initDataFile(init_data_file):
     init_crypto = data_manager.Crypto()
     match = False
@@ -94,6 +93,7 @@ def initDataFile(init_data_file):
             color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), 'Passwords do not match!')])
 
     init_data_file.save(init_data_file.filepath, init_crypto, '{"config":[],"items":[]}')
+
 
 if __name__ == '__main__':
     crypto = data_manager.Crypto()
@@ -110,24 +110,22 @@ if __name__ == '__main__':
         if os.path.exists(data_file.filepath.__str__()):
             color_print([(CLI.CLI.get_colour(CLI.CLI(), "Warning"), 'File already exists! Selecting this file.')])
         else:
-            initDataFile(data_file.filepath)  # TODO this needs fixed # what was it repesenting
+            initDataFile(data_file.filepath)
 
     data_manager.load(crypto)
-
+    json_data = None
     try:
-        json_data = json.loads(data_file.content) #<-- Fixed this
+        json_data = json.loads(data_file.content)
     except None:
         color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), 'Incorrect password!')])
-    finally:
-        exit()
 
     while True:
         main_result = CLI.second_menu()
         option = main_result["main"]
         if option == 'Exit':
             if main_result["save"] != 'Cancel':
-                if main_result["save"] == 'Yes':
-                    data_manager.save(json_data)  # TODO this needs fixed
+                if main_result["save"] == 'Yes' and json_data is not None:
+                    data_manager.save(crypto, json_data)
                 exit()
         elif option == 'Get login':
             getItem(json_data["items"])

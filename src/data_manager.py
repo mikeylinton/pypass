@@ -52,6 +52,7 @@ class FileData:
         self._filepath = './pypass.json'
         self._content = ""
 
+    @property
     def content(self):
         return self._content
 
