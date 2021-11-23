@@ -74,9 +74,21 @@ def import_items(result):
         import_data = json.load(open(filepath, 'r'))['items']
         for x in import_data:
             if x['type'] == 1:
-                import_item = {"name": x["name"], "uri": x["login"]["uris"][0]["uri"],
-                               "username": x["login"]["username"],
-                               "password": x["login"]["password"], "UUID": x["id"]}
+                try:
+                    uri = x["login"]["uris"][0]["uri"]
+                except KeyError:
+                    uri = None
+                try:
+                    username = x["login"]["username"]
+                except KeyError:
+                    username = None
+                try:
+                    password = x["login"]["password"]
+                except KeyError:
+                    password = None
+                import_item = {"name": x["name"], "uri": uri,
+                               "username": username,
+                               "password": password, "UUID": x["id"]}
                 items.append(import_item)
     return items
 
