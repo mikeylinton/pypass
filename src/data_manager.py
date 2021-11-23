@@ -24,27 +24,17 @@ class Crypto:
 
     @key.setter
     def key(self, value):
-        self.__key = self.keygen(value)
+        self.__key = keygen(value)
 
     def encrypt(self, plaintext):
-        byts = bytes(str(plaintext), 'utf-8')
+        byts = bytes(plaintext.__str__(), 'utf-8')
         f = Fernet(self.key)
         return f.encrypt(byts).decode('utf-8')
 
     def decrypt(self, ciphertext):
-        byts = bytes(str(ciphertext), 'utf-8')
+        byts = bytes(ciphertext.__str__(), 'utf-8')
         f = Fernet(self.key)
         return f.decrypt(byts).decode('utf-8')
-
-    def keygen(self, value):
-        password = bytes(value, 'utf-8')
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=password,
-            iterations=100000,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(password))
 
 
 class FileData:
@@ -62,24 +52,36 @@ class FileData:
 
     @property
     def filepath(self):
-        return self._filepath
+        return self._filepath.__str__()
 
     @filepath.setter
     def filepath(self, value):
-        self._filepath = value
+        self._filepath = value.__str__()
 
 
-def fileExists(filepath):
+def keygen(value: str):
+    password = bytes(value, 'utf-8')
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=password,
+        iterations=100000,
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password))
+
+
+def file_exists(filepath: str):
     return os.path.exists(filepath)
 
 
-def load(crypto: Crypto):
-    with open(FileData.filepath.__str__(), 'r') as f:
+def load(crypto: Crypto, data: FileData):
+    with open(data.filepath, 'r') as f:
         lines = f.readlines()
-        FileData.content_getter = crypto.decrypt(''.join(lines))
+    content = ''.join(lines)
+    data.content = crypto.decrypt(content)
 
 
-def save(crypto: Crypto, json_data):
+def save(crypto: Crypto, filepath: str, json_data: dict):
     ciphertext = crypto.encrypt(json.dumps(json_data))
-    with open(FileData.filepath.__str__(), 'w') as f:
+    with open(filepath, 'w') as f:
         f.write(ciphertext)

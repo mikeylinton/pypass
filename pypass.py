@@ -5,18 +5,20 @@ import uuid
 
 from getpass import getpass
 from InquirerPy.utils import color_print
+from cryptography.fernet import InvalidToken
+
 from src import CLI
 from src import data_manager
 
 
-def selectItem(items):
-    items = [[x["UUID"], x["name"]] for x in items]
-    items.insert(0, 'Back')
+def select_item(items):
+    items_uuid_name = [[x["UUID"], x["name"]].__str__() for x in items]
+    items_uuid_name.insert(0, 'Back')
     select = [
         {
             'type': 'list',
             'message': 'What would you like to do?',
-            'choices': items
+            'choices': items_uuid_name
         },
     ]
     selected_item = CLI.prompt(select)[0]
@@ -26,65 +28,65 @@ def selectItem(items):
         return selected_item[0]
 
 
-def getItem(items):
-    UUID = selectItem(items)
-    if UUID is not None:
-        for x in items:
-            if x["UUID"] == UUID:
-                username = x["username"]
-                password = x["password"]
-                if username is not None:
-                    pyperclip.copy(username)
-                    print('Username: ' + username)
-                    input('Username saved to clipboard, press return to get password.')
-                if password is not None:
-                    pyperclip.copy(password)
-                    input('Password saved to clipboard, press return to clear clipboard.')
-                break
+def get_item(items):
+    if not items:
+        color_print([(CLI.CLI.get_colour(CLI.CLI(), "Warning"), 'No saved logins!')])
+    else:
+        items_uuid = select_item(items)
+        if items_uuid is not None:
+            for x in items:
+                if x["UUID"] == items_uuid:
+                    username = x["username"]
+                    password = x["password"]
+                    if username is not None:
+                        pyperclip.copy(username)
+                        print('Username: ' + username)
+                        input('Username saved to clipboard, press return to get password.')
+                    if password is not None:
+                        pyperclip.copy(password)
+                        input('Password saved to clipboard, press return to clear clipboard.')
+                    break
 
 
-def delItem(items):
-    UUID = selectItem(items)
-    if UUID is not None:
+def del_item(items):
+    item_uuid = select_item(items)
+    if item_uuid is not None:
         for x in items:
-            if x["UUID"] == UUID:
+            if x["UUID"] == item_uuid:
                 items.remove(x)
                 break
 
 
-def createItem(result):
-    item = {"name": result["loginName"],
-            "username": result["loginUsername"],
-            "uri": result["loginURI"],
-            "password": getpass("Password:"),
-            "UUID": str(uuid.uuid4())}
-    return item
+def create_item(result):
+    new_item = {"name": result["loginName"],
+                "username": result["loginUsername"],
+                "uri": result["loginURI"],
+                "password": getpass("Password:"),
+                "UUID": uuid.uuid4().__str__()}
+    return new_item
 
 
-def importItems(result):
-    option = result['import']
+def import_items(result):
+    import_option = result['import']
     filepath = result['filepath']
     items = []
-    if option == 'Bitwarden (unencrypted)':
-        data = json.load(open(filepath, 'r'))['items']
-        for x in data:
+    if import_option == 'Bitwarden (unencrypted)':
+        import_data = json.load(open(filepath, 'r'))['items']
+        for x in import_data:
             if x['type'] == 1:
-                item = {}
-                item["name"] = x["name"]
-                item["uri"] = x["login"]["uris"][0]["uri"]
-                item["username"] = x["login"]["username"]
-                item["password"] = x["login"]["password"]
-                item["UUID"] = x["id"]
-                items.append(item)
+                import_item = {"name": x["name"], "uri": x["login"]["uris"][0]["uri"],
+                               "username": x["login"]["username"],
+                               "password": x["login"]["password"], "UUID": x["id"]}
+                items.append(import_item)
     return items
 
 
-def initDataFile(init_data_file):
+def init_data_file(filepath):
     init_crypto = data_manager.Crypto()
     match = False
     while not match:
-        match = init_crypto.password_comp(getpass('password please:'),
-                                          getpass('confirm password please:'))
+        match = init_crypto.password_comp(getpass('Password:'),
+                                          getpass('confirm password:'))
 
         if match:
             color_print([(CLI.CLI.get_colour(CLI.CLI(), "Success"), 'Password updated.')])
@@ -92,32 +94,38 @@ def initDataFile(init_data_file):
         else:
             color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), 'Passwords do not match!')])
 
-    init_data_file.save(init_data_file.filepath, init_crypto, '{"config":[],"items":[]}')
+    data_manager.save(init_crypto, filepath, json.loads('{"config":[],"items":[]}'))
 
 
 if __name__ == '__main__':
     crypto = data_manager.Crypto()
-    data_file = data_manager.FileData()
-    init_result = CLI.first_menu()
+    data = data_manager.FileData()
+    while not data_manager.file_exists(data.filepath):
+        init_result = CLI.first_menu()
+        if init_result["init"] == 'Exit':
+            exit()
+        elif init_result["upload"] is not None and init_result["upload"] != '':
+            data.filepath = init_result["upload"]
+        elif init_result["create"] is not None:
+            if init_result["create"] != '':
+                data.filepath = init_result["create"]
+            if os.path.exists(data.filepath.__str__()):
+                color_print([(CLI.CLI.get_colour(CLI.CLI(), "Warning"), 'File already exists! Selecting this file.')])
+            else:
+                init_data_file(data.filepath)
 
-    if init_result["init"] == 'Exit':
+    crypto.key = getpass('Password:')
+    try:
+        data_manager.load(crypto, data)
+    except InvalidToken:
+        color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), 'Invalid file or incorrect password!')])
         exit()
-    elif init_result["upload"] is not None:
-        data_file.filepath = init_result["upload"]
-    elif init_result["create"] is not None:
-        if init_result["create"] != '':
-            data_file.filepath = init_result["create"]
-        if os.path.exists(data_file.filepath.__str__()):
-            color_print([(CLI.CLI.get_colour(CLI.CLI(), "Warning"), 'File already exists! Selecting this file.')])
-        else:
-            initDataFile(data_file.filepath)
-
-    data_manager.load(crypto)
     json_data = None
     try:
-        json_data = json.loads(data_file.content)
-    except None:
-        color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), 'Incorrect password!')])
+        json_data = json.loads(data.content)
+    except TypeError as e:
+        color_print([(CLI.CLI.get_colour(CLI.CLI(), "Alert"), e.__str__().capitalize() + '.')])
+        exit()
 
     while True:
         main_result = CLI.second_menu()
@@ -125,18 +133,19 @@ if __name__ == '__main__':
         if option == 'Exit':
             if main_result["save"] != 'Cancel':
                 if main_result["save"] == 'Yes' and json_data is not None:
-                    data_manager.save(crypto, json_data)
+                    data_manager.save(crypto, data.filepath, json_data)
                 exit()
         elif option == 'Get login':
-            getItem(json_data["items"])
+            get_item(json_data["items"])
         elif option == 'Add login':
             if main_result['loginName'] == '':
                 print('Name required!')
             elif main_result['loginUsername'] == '':
                 print('Username required!')
             else:
-                json_data["items"].append(createItem(main_result))
+                item = create_item(main_result)
+                json_data["items"].append(item)
         elif option == 'Del login':
-            delItem(json_data["items"])
+            del_item(json_data["items"])
         elif option == 'Import data' and main_result["import"] != 'Back':
-            json_data["items"].extend(importItems(main_result))
+            json_data["items"].extend(import_items(main_result))

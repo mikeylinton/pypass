@@ -15,8 +15,8 @@ class CLI:
             "Warning": "#ffc107"
         }
 
-    def get_colour(self, thing: str):  # <- need a better name though :'D
-        return self.colour[thing]
+    def get_colour(self, colour: str):
+        return self.colour[colour]
 
 
 def first_menu():
