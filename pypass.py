@@ -12,7 +12,8 @@ from src import data_manager
 
 
 def select_item(items):
-    items_uuid_name = [[x["UUID"], x["name"]].__str__() for x in items]
+    items_uuid_name = [[x["UUID"], x["name"]] for x in items]
+    # noinspection PyTypeChecker
     items_uuid_name.insert(0, 'Back')
     select = [
         {
@@ -25,6 +26,7 @@ def select_item(items):
     if selected_item == 'Back':
         return None
     else:
+        print(selected_item[0])
         return selected_item[0]
 
 
