@@ -102,6 +102,17 @@ def second_menu():
     return inquirer(var)
 
 
+def simple_choice_menu(choices):
+    var = [
+        {
+            'type': 'list',
+            'message': 'What would you like to do?',
+            'choices': choices
+        },
+    ]
+    return inquirer(var)[0]
+
+
 def inquirer(questions):
     try:
         result = prompt(questions, vi_mode=True)

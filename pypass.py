@@ -15,18 +15,10 @@ def select_item(items):
     items_uuid_name = [[x["UUID"], x["name"]] for x in items]
     # noinspection PyTypeChecker
     items_uuid_name.insert(0, 'Back')
-    select = [
-        {
-            'type': 'list',
-            'message': 'What would you like to do?',
-            'choices': items_uuid_name
-        },
-    ]
-    selected_item = CLI.prompt(select)[0]
+    selected_item = CLI.simple_choice_menu(items_uuid_name)
     if selected_item == 'Back':
         return None
     else:
-        print(selected_item[0])
         return selected_item[0]
 
 
