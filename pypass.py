@@ -13,10 +13,10 @@ from src import data_manager
 
 def get_item_uuid(items):
     if not items:
-        color_print([(CLI.get_colour("Warning"), 'No saved logins!')])
+        color_print([(CLI.get_colour('Warning'), 'No saved logins!')])
         return None
     else:
-        items_uuid_name = [[x["UUID"], x["name"]] for x in items]
+        items_uuid_name = [[item["UUID"], item["name"]] for item in items]
         # noinspection PyTypeChecker
         items_uuid_name.insert(0, 'Back')
         selected_item = CLI.simple_choice_menu(items_uuid_name)
@@ -62,25 +62,25 @@ def import_items(result):
     filepath = result["filepath"]
     items = []
     if import_option == 'Bitwarden (unencrypted)':
-        import_data = json.load(open(filepath, 'r'))["items"]
-        for x in import_data:
-            if x["type"] == 1:
+        import_data_items = json.load(open(filepath, 'r'))["items"]
+        for import_data_item in import_data_items:
+            if import_data_item["type"] == 1:
                 try:
-                    uri = x["login"]["uris"][0]["uri"]
+                    uri = import_data_item["login"]["uris"][0]["uri"]
                 except KeyError:
                     uri = None
                 try:
-                    username = x["login"]["username"]
+                    username = import_data_item["login"]["username"]
                 except KeyError:
                     username = None
                 try:
-                    password = x["login"]["password"]
+                    password = import_data_item["login"]["password"]
                 except KeyError:
                     password = None
-                import_item = {"name": x["name"], "uri": uri,
-                               "username": username,
-                               "password": password, "UUID": x["id"]}
-                items.append(import_item)
+                item = {"name": import_data_item["name"], "uri": uri,
+                        "username": username,
+                        "password": password, "UUID": import_data_item["id"]}
+                items.append(item)
     return items
 
 
@@ -168,4 +168,3 @@ if __name__ == '__main__':
                     update_password(crypto)
                 else:
                     color_print([(CLI.get_colour('Alert'), 'Password incorrect!')])
-
