@@ -9,14 +9,16 @@ from src import data_manager
 
 class CLI:
     def __init__(self):
-        self.colour = {
-            "Alert": "#dc3545",
-            "Success": "#198754",
-            "Warning": "#ffc107"
-        }
+        pass
 
-    def get_colour(self, colour: str):
-        return self.colour[colour]
+
+def get_colour(colour_type):
+    colours = {
+        'Alert': '#dc3545',
+        'Success': '#198754',
+        'Warning': '#ffc107'
+    }
+    return colours[colour_type]
 
 
 def first_menu():
@@ -58,13 +60,13 @@ def second_menu():
                 'Add login',
                 'Del login',
                 'Import data',
-                # 'Settings',
+                'Settings',
                 'Exit'
             ],
             'name': 'main'
         },
         {
-            'message': 'Would you like to save?',
+            'message': 'Would you like to save changes?',
             'type': 'list',
             'when': lambda _: _['main'] == 'Exit',
             'choices': [
@@ -74,14 +76,20 @@ def second_menu():
             ],
             'name': 'save'
         },
+        {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Entry name?',
+         'name': 'login_name'},
+        {'type': 'input', 'when': lambda _: _['main'] == 'Add login' and _['loginName'] != '', 'message': 'URI?',
+         'name': 'login_uri'},
+        {'type': 'input', 'when': lambda _: _['main'] == 'Add login' and _['loginName'] != '',
+         'message': 'Username?', 'name': 'login_username'},
         {
             'message': 'Import from?',
             'type': 'list',
             'when': lambda _: _['main'] == 'Import data',
             'name': 'import',
             'choices': [
-                'Bitwarden (unencrypted)',
-                'Back'
+                'Back',
+                'Bitwarden (unencrypted)'
             ]
         },
         {
@@ -92,12 +100,16 @@ def second_menu():
             'validate': PathValidator(),
             'only_files': True
         },
-        {'type': 'input', 'when': lambda _: _['main'] == 'Add login', 'message': 'Entry name?',
-         'name': 'loginName'},
-        {'type': 'input', 'when': lambda _: _['main'] == 'Add login' and _['loginName'] != '', 'message': 'URI?',
-         'name': 'loginURI'},
-        {'type': 'input', 'when': lambda _: _['main'] == 'Add login' and _['loginName'] != '',
-         'message': 'Username?', 'name': 'loginUsername'},
+        {
+            'message': 'What would you like to do?',
+            'type': 'list',
+            'when': lambda _: _['main'] == 'Settings',
+            'name': 'settings',
+            'choices': [
+                'Back',
+                'Change password'
+            ]
+        }
     ]
     return inquirer(var)
 
@@ -105,11 +117,23 @@ def second_menu():
 def simple_choice_menu(choices):
     var = [
         {
-            'type': 'list',
             'message': 'What would you like to do?',
+            'type': 'list',
             'choices': choices
-        },
+        }
     ]
+    return inquirer(var)[0]
+
+
+def confirm_choice(title: str):
+    var = [{
+        'message': title,
+        'type': 'list',
+        'choices': [
+            'No',
+            'Yes'
+        ]
+    }]
     return inquirer(var)[0]
 
 

@@ -11,9 +11,9 @@ class Crypto:
     def __init__(self):
         self.__key = None
 
-    def password_comp(self, password_a, password_b):
-        if password_a == password_b:
-            self.key = password_a
+    def password_match(self, password, password_check):
+        if password == password_check:
+            self.key = password
             return True
         else:
             return False
@@ -68,6 +68,13 @@ def keygen(value: str):
         iterations=100000,
     )
     return base64.urlsafe_b64encode(kdf.derive(password))
+
+
+def key_match(key, guess):
+    if key == keygen(guess):
+        return True
+    else:
+        return False
 
 
 def file_exists(filepath: str):
