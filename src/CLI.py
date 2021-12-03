@@ -60,6 +60,7 @@ def second_menu():
                 'Add login',
                 'Del login',
                 'Import data',
+                'Export data',
                 'Settings',
                 'Exit'
             ],
@@ -89,9 +90,24 @@ def second_menu():
             'name': 'import',
             'choices': [
                 'Back',
-                'Bitwarden (unencrypted)'
+                'Bitwarden (unencrypted)',
+                'PyPass (unencrypted)'
             ]
         },
+        {
+            'message': 'Export to?',
+            'type': 'list',
+            'when': lambda _: _['main'] == 'Export data',
+            'name': 'export',
+            'choices': [
+                'Back',
+                'PyPass (unencrypted)'
+            ]
+        },
+        {'type': 'input', 'when': lambda _: _['main'] == 'Export data' and _['export'] != 'Back', 'message': 'Export '
+                                                                                                             'file '
+                                                                                                             'name?',
+         'name': 'export_filepath'},
         {
             'message': 'Enter the filepath to upload:',
             'type': 'filepath',
@@ -107,6 +123,7 @@ def second_menu():
             'name': 'settings',
             'choices': [
                 'Back',
+                'Manage folders',
                 'Change password'
             ]
         }

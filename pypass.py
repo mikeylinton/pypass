@@ -19,11 +19,11 @@ def get_item_uuid(items):
         items_uuid_name = [[item["UUID"], item["name"]] for item in items]
         # noinspection PyTypeChecker
         items_uuid_name.insert(0, 'Back')
-        selected_item = CLI.simple_choice_menu(items_uuid_name)
-        if selected_item == 'Back':
+        choice = CLI.simple_choice_menu(items_uuid_name)
+        if choice == 'Back':
             return None
         else:
-            return selected_item[0]
+            return choice[0]
 
 
 def get_username_password(items, item_uuid):
@@ -31,13 +31,20 @@ def get_username_password(items, item_uuid):
         if item["UUID"] == item_uuid:
             username = item["username"]
             password = item["password"]
-            if username is not None:
-                pyperclip.copy(username)
-                print('Username: ' + username)
-                input('Username saved to clipboard, press return to get password.')
-            if password is not None:
-                pyperclip.copy(password)
-                input('Password saved to clipboard, press return to clear clipboard.')
+            if username or password is not None:
+                if username is not None:
+                    if password is not None:
+                        username_responce = 'press return to get password.'
+                    else:
+                        username_responce = 'press return to clear clipboard.'
+                    pyperclip.copy(username)
+                    print('Username: ' + username)
+                    input('Username saved to clipboard, ' + username_responce)
+                if password is not None:
+                    pyperclip.copy(password)
+                    input('Password saved to clipboard, press return to clear clipboard.')
+            else:
+                color_print([(CLI.get_colour('Alert'), 'No username or password saved!')])
             break
 
 
@@ -61,26 +68,44 @@ def import_items(result):
     import_option = result["import"]
     filepath = result["filepath"]
     items = []
+    import_data = json.load(open(filepath, 'r'))
     if import_option == 'Bitwarden (unencrypted)':
-        import_data_items = json.load(open(filepath, 'r'))["items"]
-        for import_data_item in import_data_items:
-            if import_data_item["type"] == 1:
+        for item in import_data["items"]:
+            if item["type"] == 1:
                 try:
-                    uri = import_data_item["login"]["uris"][0]["uri"]
+                    uri = item["login"]["uris"][0]["uri"]
                 except KeyError:
                     uri = None
                 try:
-                    username = import_data_item["login"]["username"]
+                    username = item["login"]["username"]
                 except KeyError:
                     username = None
                 try:
-                    password = import_data_item["login"]["password"]
+                    password = item["login"]["password"]
                 except KeyError:
                     password = None
-                item = {"name": import_data_item["name"], "uri": uri,
+                item = {"name": item["name"], "uri": uri,
                         "username": username,
-                        "password": password, "UUID": import_data_item["id"]}
+                        "password": password, "UUID": item["id"]}
                 items.append(item)
+    elif import_option == 'PyPass (unencrypted)':
+        for item in import_data["items"]:
+            try:
+                uri = item["uri"]
+            except KeyError:
+                uri = None
+            try:
+                username = item["username"]
+            except KeyError:
+                username = None
+            try:
+                password = item["password"]
+            except KeyError:
+                password = None
+            item = {"name": item["name"], "uri": uri,
+                    "username": username,
+                    "password": password, "UUID": item["UUID"]}
+            items.append(item)
     return items
 
 
@@ -132,7 +157,7 @@ if __name__ == '__main__':
     except TypeError as e:
         color_print([(CLI.get_colour('Alert'), e.__str__().capitalize() + '.')])
         exit()
-
+    print(json_data)
     while True:
         main_result = CLI.second_menu()
         option = main_result["main"]
@@ -161,6 +186,9 @@ if __name__ == '__main__':
                 json_data["items"].append(new_item)
         elif option == 'Import data' and main_result["import"] != 'Back':
             json_data["items"].extend(import_items(main_result))
+        elif option == 'Export' and main_result["export"] != 'Back':
+            with open(main_result["export_filepath"], 'w', encoding='utf8') as json_file:
+                json.dump(json_data, json_file, indent=4)
         elif option == 'Settings':
             if main_result["settings"] == 'Change password':
                 if data_manager.key_match(crypto.key, getpass('Current password:')):
