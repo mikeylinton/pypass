@@ -1,0 +1,26 @@
+{
+	"config": [], 
+	"items": [
+		{
+			"name": "Example", 
+			"uri": "https://www.example.com/", 
+			"username": "Alice@example.com", 
+			"password": "password", 
+			"UUID": "aaca195c-8f46-41d4-a267-5f46de8ed3c3"
+		}, 
+		{
+			"name": "Example2", 
+			"uri": "https://www.example2.com/", 
+			"username": "Bob@example.com", 
+			"password": "password", 
+			"UUID": "cb73f9cc-646b-46ca-a1d2-dbadcfa63774"
+		}, 
+		{
+			"name": "Example3", 
+			"uri": "https://www.example3.com/", 
+			"username": "Eve@example.com", 
+			"password": "password", 
+			"UUID": "3ab1bf2a-40ef-4777-aaaf-7dd7ce6e8f74"
+		}
+	]
+}
